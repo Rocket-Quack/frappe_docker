@@ -28,3 +28,6 @@ venv
 
 # NodeJS
 node_modules
+
+# easy-docker local runtime data (contains secrets)
+.easy-docker/

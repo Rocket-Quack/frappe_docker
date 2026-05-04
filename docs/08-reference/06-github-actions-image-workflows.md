@@ -11,6 +11,7 @@ The current workflow layout is:
 - `.github/workflows/core-build-develop.yml`
 - `.github/workflows/core-build-stable.yml`
 - `.github/workflows/core-build-test-images.yml`
+- `.github/workflows/core-scan-published-images.yml`
 - `.github/workflows/core-publish-images.yml`
 - `.github/workflows/app-build-image.yml`
 
@@ -22,6 +23,11 @@ They decide when the core image pipeline runs.
 - resolves the image versions for the requested release line
 - builds the shared core images into a local registry
 - runs the test suite against those images
+
+`core-scan-published-images.yml` is the scheduled workflow that:
+
+- pulls already published core images from Docker Hub
+- scans them with Trivy on a weekly cadence
 
 `core-publish-images.yml` is the reusable workflow that:
 
@@ -64,6 +70,8 @@ flowchart TD
         F[core-publish-images.yml]
         G[Push Docker Hub: erpnext, base, build]
         H[Push GHCR: base, build]
+        I[core-scan-published-images.yml]
+        J[Weekly Trivy scan]
 
         A --> B
         B --> C
@@ -72,25 +80,27 @@ flowchart TD
         E --> F
         F --> G
         F --> H
+        G --> I
+        I --> J
     end
 
     subgraph App["Downstream app flow"]
-        I[Downstream repo workflow]
-        J[app-build-image.yml]
-        K[Create apps.json]
-        L[Build images/layered/Containerfile]
-        M[Install app]
-        N[Push final app image]
+        K[Downstream repo workflow]
+        L[app-build-image.yml]
+        M[Create apps.json]
+        N[Build images/layered/Containerfile]
+        O[Install app]
+        P[Push final app image]
 
-        I --> J
-        J --> K
         K --> L
         L --> M
         M --> N
+        N --> O
+        O --> P
     end
 
-    G --> J
-    H --> J
+    G --> L
+    H --> L
 ```
 
 More concretely:
@@ -104,6 +114,10 @@ core-build-test-images.yml
 core-publish-images.yml
   -> pushes Docker Hub: erpnext, base, build
   -> pushes GHCR: base, build
+
+core-scan-published-images.yml
+  -> pulls published Docker Hub images
+  -> scans them weekly with Trivy
 
 app-build-image.yml
   -> pulls:
@@ -130,6 +144,7 @@ Current examples:
 - `core-build-develop.yml`
 - `core-build-stable.yml`
 - `core-build-test-images.yml`
+- `core-scan-published-images.yml`
 - `core-publish-images.yml`
 - `app-build-image.yml`
 - `docs-publish-site.yml`
@@ -140,6 +155,7 @@ Recommended visible workflow names:
 - `Core / Build Develop`
 - `Core / Build Stable`
 - `Core / Build and Test Images`
+- `Core / Scan Published Images`
 - `Core / Publish Images`
 - `App / Build Image`
 - `Docs / Publish Site`

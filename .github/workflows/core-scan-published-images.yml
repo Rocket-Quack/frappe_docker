@@ -1,0 +1,47 @@
+name: Core / Scan Published Images
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        image:
+          - docker.io/frappe/erpnext:latest
+          - docker.io/frappe/erpnext:version-15
+          - docker.io/frappe/erpnext:version-16
+          - docker.io/frappe/base:develop
+          - docker.io/frappe/base:version-15
+          - docker.io/frappe/base:version-16
+          - docker.io/frappe/build:develop
+          - docker.io/frappe/build:version-15
+          - docker.io/frappe/build:version-16
+          - docker.io/frappe/bench:latest
+
+    steps:
+      - name: Pull published image
+        run: docker pull "${{ matrix.image }}"
+
+      - name: Scan image with Trivy
+        run: |
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$RUNNER_TEMP/trivy-cache:/root/.cache/trivy" \
+            aquasec/trivy:latest \
+            image \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            --timeout 10m \
+            --exit-code 1 \
+            "${{ matrix.image }}"
